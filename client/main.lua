@@ -70,7 +70,7 @@ CreateThread(function()
                     sleep = 5
 
                     local vehiclePos = GetOffsetFromEntityInWorldCoords(vehicle, 0.0, 1.0, 0.5)
-                    DrawText3D(vehiclePos.x, vehiclePos.y, vehiclePos.z, Lang:t("info.skeys"))
+                  --  DrawText3D(vehiclePos.x, vehiclePos.y, vehiclePos.z, Lang:t("info.skeys"))
                     SetVehicleEngineOn(vehicle, false, false, true)
 
                     if IsControlJustPressed(0, 74) then
@@ -352,28 +352,42 @@ function LockpickDoor(isAdvanced)
     if GetVehicleDoorLockStatus(vehicle) <= 0 then return end
 
     usingAdvanced = isAdvanced
-    TriggerEvent('qb-lockpick:client:openLockpick', lockpickFinish)
+    exports['ps-ui']:Circle(function(success)
+        local chance = math.random()
+        if success then
+            TriggerServerEvent('hud:server:GainStress', math.random(1, 4))
+            lastPickedVehicle = vehicle
+
+            if GetPedInVehicleSeat(vehicle, -1) == PlayerPedId() then
+                TriggerServerEvent('qb-vehiclekeys:server:AcquireVehicleKeys', QBCore.Functions.GetPlate(vehicle))
+            else
+                QBCore.Functions.Notify('You managed to pick the door lock open!', 'success')
+                SetVehicleDoorsLocked(vehicle, 1)
+            end
+        else
+            TriggerServerEvent('hud:server:GainStress', math.random(1, 4))
+            AttemptPoliceAlert("steal")
+        end
+        
+        if usingAdvanced then
+            if chance <= Config.RemoveLockpickAdvanced then
+                TriggerServerEvent("qb-vehiclekeys:server:breakLockpick", "advancedlockpick")
+            end
+        else
+            if chance <= Config.RemoveLockpickNormal then
+                TriggerServerEvent("qb-vehiclekeys:server:breakLockpick", "lockpick")
+            end
+        end
+    end, 4, 10) -- NumberOfCircles, MS
+    --TriggerEvent('qb-lockpick:client:openLockpick', lockpickFinish)
 end
 
 function lockpickFinish(success)
     local vehicle = QBCore.Functions.GetClosestVehicle()
 
-    local chance = math.random()
-    if success then
-        TriggerServerEvent('hud:server:GainStress', math.random(1, 4))
-        lastPickedVehicle = vehicle
-
-        if GetPedInVehicleSeat(vehicle, -1) == PlayerPedId() then
-            TriggerServerEvent('qb-vehiclekeys:server:AcquireVehicleKeys', QBCore.Functions.GetPlate(vehicle))
-        else
-            QBCore.Functions.Notify(Lang:t("notify.vlockpick"), 'success')
-            SetVehicleDoorsLocked(vehicle, 1)
-        end
-
-    else
-        TriggerServerEvent('hud:server:GainStress', math.random(1, 4))
-        AttemptPoliceAlert("steal")
-    end
+   -- local chance = math.random()
+   -- if success then
+        
 
     if usingAdvanced then
         if chance <= Config.RemoveLockpickAdvanced then
